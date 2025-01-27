@@ -15,6 +15,11 @@ RUN apt-get update && apt-get install -y gcc \
 # Install Python dependencies from requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the Firestore service account key into the container
+COPY slimeify-418ca51fd7e7.json /api/slimeify-418ca51fd7e7.json
+
+ENV GOOGLE_APPLICATION_CREDENTIALS="/api/slimeify-418ca51fd7e7.json"
+
 # Expose port 8080 (default for Flask/Gunicorn)
 EXPOSE 8080
 

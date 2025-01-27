@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "slimeify",
+  "private_key_id": "418ca51fd7e79dd188760a3d74313da2cdc0a1b4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDLzR4cy5u1M1kA\nNZXPHyFXYZxVLfLXJ7eX63wiZnqmX+MOt1eFHMbDRvu+a7o89FIJa4hZCkTZ/bnl\nlYCMQNtI0CLeAOtomv91sbJpJpMJ4qbZula6Ksv2hGAdYg25PNlWfwyLrM6VZqF1\n6DyGssmH/DWj8k9rn7LEWjYqrAXWf/Ju306uemh+c6p6aHyGoGIaXEKPz+4295or\nwVxduwZtELo31UrYhrYBRhwilT2GvjmP6t6djdDKuwObqn1Gg6BpOvuqt5GsNVWE\nRpv1z6VHgAvtx2j7wUpyK+x03kRuf5Z1X2c0qrWHLyvPjdN75Zk4UnCSVlof3why\nfdCBvvUxAgMBAAECggEAA/DJSUS0CE/lw6Z0I10CF8GexfFnlxfGr6J8/7IB7ryz\nWdqsxBaV5gDkW/MHS0qbiDIv/egF7JrvOvgDJad17UEhAUeIi4ptJHHjx1JYnmTE\nhDis9eQCIcaQkHgm+t6R38heAo0CA2Jrcsx02JkskUzSe5pniucYxj3iHg5g5iek\nqma2J0AIDvso3ts05SkuzDCdALvthkgttPTaMuhB53hz+9eDPetPlvGLLrGYfR6f\nOWPnmKk/KNF4sZceubvionKz5ndeOe5mn87P2FgqFm+TgUkUlT7egOGcgy+1JqEr\n3mpFcYra74LV1LjbYNY0sK+V0BCM4jtfoDAWu+BP1QKBgQD6zgG+rw3SZh3Uci1X\ngZVuEWkZspF3M8Zl/BOx7TfSdbIkeiuSSS231dH9x6EQE2VQPfz/K9RbzqYotoc3\nbFnLR6j8F9f/OotkYnUS0Lo4gEURypYA7Kn7lPemJ9RDg88iAaokbHKKEQNGdrXa\ntwigxN+waBTnP0hehp9yCsO5WwKBgQDQBdseNh3hwmUJQD/Sr3FVDy9EunR2h4D8\no6xwzSFs2EcO9/c5zeGo4gmEStGFcXhSIX23SumhO6V5QBX3pMeFEAlOJRoqbvdH\nK45Zusyb/EiPswHK1mWBRfnUKXmsLr4g5eC+JUqtfZBlxrcmeEB61TVhvnxSRFq1\nw5hbM+aFYwKBgQCn0mNOgfpguB3rwz7d2ALydMn7/QXjWoy+P0+6dj4tIL5ENE+l\ngjwKUBREmWkHxcK8T85TvLNLf1ql0YVnK6RmJpxHm3jX+we88zjdjzeciRAumH2J\nPtN7WbHgx7P8PV3DppN/7eUyx7GGW/bR1Dn8wd/gPbUHC8xUHAbjG5reEwKBgFIX\nrYQ7qQk51POUpls3n0sJBgdiaamJCg8pbFjLqwAwTcKLesYWCJLEOSs693po8CnB\nS8J0zsQxLLkv4DttjMtnK7TqEWxjhDRS7QdeH3cDVYNYCkII39/nRJNElt6rR57l\n+Q4w20qh/cUcaZTF6fRPhZSAPsGcdgu7F7oOPk+vAoGAdVhMqIlfR/Y9prIj444H\n2y5zI3DsVi0kGuedLVLEtOFOg0jrzcCkHP8hSaAtv1PXUBrsOB0ov7dvOLXMfC95\ndVEtTsoVd4xNCScpGkb+lHzep6apEUybto/p5b/HCU7S/wmknm9vnnfjb9DAYIyi\nvCs/rgDT0oPZVbdg03xMUtQ=\n-----END PRIVATE KEY-----\n",
+  "client_email": "mlb-sluggers@slimeify.iam.gserviceaccount.com",
+  "client_id": "117640465506533664328",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mlb-sluggers%40slimeify.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
