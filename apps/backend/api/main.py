@@ -260,6 +260,7 @@ def get_highlights(teamId):
         print(f"Error fetching highlights for team {teamId}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
+#Endpoint to create a new highlight
 @app.route("/highlights", methods=["POST"])
 def add_highlight():
     try:
@@ -287,22 +288,30 @@ def add_highlight():
             if not isinstance(item["scenes"], list):
                 return jsonify({"error": "Each storyboard's 'scenes' must be an array."}), 400
 
+        # Convert gamePk to string for consistency
+        game_pk_str = str(data["gamePk"])
+        
+        # Check if gamePk already exists
+        doc_ref = db.collection("highlights").document(game_pk_str)
+        if doc_ref.get().exists:
+            return jsonify({"error": f"Highlight with gamePk {game_pk_str} already exists."}), 409  # 409 Conflict
+
         # Add timestamps to the record
         data["gameDate"] = datetime.fromisoformat(data["gameDate"].replace("Z", "+00:00"))
         data["updatedAt"] = datetime.utcnow()
         data["createdAt"] = datetime.utcnow()
 
-        # Insert into Firestore (use gamePk as the document ID)
-        doc_ref = db.collection("highlights").document(str(data["gamePk"]))
+        # Insert into Firestore
         doc_ref.set(data)
 
-        return jsonify({"message": "Highlight added successfully", "gamePk": data["gamePk"]}), 201
+        return jsonify({"message": "Highlight added successfully", "gamePk": game_pk_str}), 201
 
     except Exception as e:
         # Log and return the error
         print(f"Error adding highlight: {e}")
         return jsonify({"error": f"An internal error occurred - Error adding highlight: {str(e)}"}), 500
 
+# Variables and functions for processing schedule for highlights
 MLB_API_BASE_URL = "https://statsapi.mlb.com/api/v1/schedule"
 
 def fetch_schedule(team_id, season):
@@ -437,6 +446,32 @@ def process_highlights(teamId, season):
 
     except Exception as e:
         print(f"Error processing highlights: {e}")
+        return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
+
+# Endpoint for updating highlights
+@app.route("/highlights/<string:gamePk>", methods=["PATCH"])
+def update_highlight(gamePk):
+    """Update specific fields of an existing highlight without overwriting other fields."""
+    try:
+        # Parse incoming JSON payload
+        update_data = request.get_json()
+
+        # Reference the document in Firestore
+        doc_ref = db.collection("highlights").document(gamePk)
+        doc = doc_ref.get()
+
+        # Check if document exists
+        if not doc.exists:
+            return jsonify({"error": f"Highlight with gamePk {gamePk} not found"}), 404
+
+        # Update Firestore document
+        update_data["updatedAt"] = datetime.utcnow().replace(tzinfo=timezone.utc)
+        doc_ref.update(update_data)
+
+        return jsonify({"message": f"Highlight {gamePk} updated successfully"}), 200
+
+    except Exception as e:
+        print(f"Error updating highlight {gamePk}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 # Main entry point
