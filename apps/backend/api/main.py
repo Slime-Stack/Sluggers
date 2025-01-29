@@ -1,14 +1,12 @@
 from flask import Flask, jsonify, request
+from datetime import datetime, timezone
+from apps.backend.api.database.sluggers_client import db
+from apps.backend.api.mlb_data_fetching.team_schedules_processor import process_past_games, check_next_game
+from apps.backend.utils.constants import ISO_FORMAT, TEAMS
 import requests
-import json 
+import json
 from google.cloud import firestore, pubsub_v1
 from datetime import datetime, timedelta, timezone
-
-# Initialize Firestore client
-db = firestore.Client(
-    project="slimeify",  # Google Cloud project ID
-    database="mlb-sluggers"  # Must be declared if it's not "(default)"
-)
 
 # Initialize Pub/Sub Publisher
 publisher = pubsub_v1.PublisherClient()
@@ -16,232 +14,18 @@ topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
 
 app = Flask(__name__)
 
-# Function to construct the team logo URL
-def get_team_logoUrl(teamId):
-    return f'https://www.mlbstatic.com/team-logos/{teamId}.svg'
-
 # Endpoint to fetch all MLB teams
 @app.route("/teams", methods=["GET"])
 def get_teams():
-    teams = [
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/109.svg",
-                    "name": "Arizona Diamondbacks",
-                    "shortName": "D-backs",
-                    "teamId": 109
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/133.svg",
-                    "name": "Athletics",
-                    "shortName": "Athletics",
-                    "teamId": 133
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/144.svg",
-                    "name": "Atlanta Braves",
-                    "shortName": "Braves",
-                    "teamId": 144
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/110.svg",
-                    "name": "Baltimore Orioles",
-                    "shortName": "Orioles",
-                    "teamId": 110
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/111.svg",
-                    "name": "Boston Red Sox",
-                    "shortName": "Red Sox",
-                    "teamId": 111
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/112.svg",
-                    "name": "Chicago Cubs",
-                    "shortName": "Cubs",
-                    "teamId": 112
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/145.svg",
-                    "name": "Chicago White Sox",
-                    "shortName": "White Sox",
-                    "teamId": 145
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/113.svg",
-                    "name": "Cincinnati Reds",
-                    "shortName": "Reds",
-                    "teamId": 113
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/114.svg",
-                    "name": "Cleveland Guardians",
-                    "shortName": "Guardians",
-                    "teamId": 114
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/115.svg",
-                    "name": "Colorado Rockies",
-                    "shortName": "Rockies",
-                    "teamId": 115
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/116.svg",
-                    "name": "Detroit Tigers",
-                    "shortName": "Tigers",
-                    "teamId": 116
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/117.svg",
-                    "name": "Houston Astros",
-                    "shortName": "Astros",
-                    "teamId": 117
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/118.svg",
-                    "name": "Kansas City Royals",
-                    "shortName": "Royals",
-                    "teamId": 118
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/108.svg",
-                    "name": "Los Angeles Angels",
-                    "shortName": "Angels",
-                    "teamId": 108
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/119.svg",
-                    "name": "Los Angeles Dodgers",
-                    "shortName": "Dodgers",
-                    "teamId": 119
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/146.svg",
-                    "name": "Miami Marlins",
-                    "shortName": "Marlins",
-                    "teamId": 146
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/158.svg",
-                    "name": "Milwaukee Brewers",
-                    "shortName": "Brewers",
-                    "teamId": 158
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/142.svg",
-                    "name": "Minnesota Twins",
-                    "shortName": "Twins",
-                    "teamId": 142
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/121.svg",
-                    "name": "New York Mets",
-                    "shortName": "Mets",
-                    "teamId": 121
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/147.svg",
-                    "name": "New York Yankees",
-                    "shortName": "Yankees",
-                    "teamId": 147
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/143.svg",
-                    "name": "Philadelphia Phillies",
-                    "shortName": "Phillies",
-                    "teamId": 143
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/134.svg",
-                    "name": "Pittsburgh Pirates",
-                    "shortName": "Pirates",
-                    "teamId": 134
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/135.svg",
-                    "name": "San Diego Padres",
-                    "shortName": "Padres",
-                    "teamId": 135
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/137.svg",
-                    "name": "San Francisco Giants",
-                    "shortName": "Giants",
-                    "teamId": 137
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/136.svg",
-                    "name": "Seattle Mariners",
-                    "shortName": "Mariners",
-                    "teamId": 136
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/138.svg",
-                    "name": "St. Louis Cardinals",
-                    "shortName": "Cardinals",
-                    "teamId": 138
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/139.svg",
-                    "name": "Tampa Bay Rays",
-                    "shortName": "Rays",
-                    "teamId": 139
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/140.svg",
-                    "name": "Texas Rangers",
-                    "shortName": "Rangers",
-                    "teamId": 140
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/141.svg",
-                    "name": "Toronto Blue Jays",
-                    "shortName": "Blue Jays",
-                    "teamId": 141
-                },
-                {
-                    "logoUrl": "https://www.mlbstatic.com/team-logos/120.svg",
-                    "name": "Washington Nationals",
-                    "shortName": "Nationals",
-                    "teamId": 120
-                }
-            ]
-    return jsonify(teams), 200
-
-    # URL for the MLB API
-    # teams_endpoint_url = 'https://statsapi.mlb.com/api/v1/teams?sportId=1'
-
-    # try:
-        # Fetch data from the MLB API
-        # response = requests.get(teams_endpoint_url)
-        # response.raise_for_status()  # Raise exception for HTTP errors
-        # data = response.json()
-
-        # Parse and format team data
-        # teams = []
-        # for team in data['teams']:
-          #  team_data = {
-          #      'teamId': team['id'],
-          #      'name': team['name'],
-          #      'shortName': team['teamName'],
-          #      'logoUrl': get_team_logoUrl(team['id'])
-          #  }
-          #  teams.append(team_data)
-
-        # Sort teams alphabetically by name
-        #teams_sorted = sorted(teams, key=lambda x: x['name'])
-        #return jsonify(teams_sorted)
-
-    #except requests.exceptions.RequestException as e:
-        #return jsonify({"error": str(e)}), 500
-
+    return jsonify(TEAMS), 200
 
 # Endpoint to fetch highlights for a specific team
 @app.route("/highlights/<int:teamId>", methods=["GET"])
-def get_highlights(teamId):
+def get_highlights(team_id):
     try:
         highlights_ref = db.collection("highlights")
-        query = highlights_ref.where("homeTeam.team_id", "==", teamId).stream()
-        query_away = highlights_ref.where("awayTeam.team_id", "==", teamId).stream()
+        query = highlights_ref.where("homeTeam.team_id", "==", team_id).stream()
+        query_away = highlights_ref.where("awayTeam.team_id", "==", team_id).stream()
 
         # Combine results from both queries
         results = []
@@ -268,7 +52,7 @@ def get_highlights(teamId):
 
     except Exception as e:
         # Log and return the error
-        print(f"Error fetching highlights for team {teamId}: {e}")
+        print(f"Error fetching highlights for team {team_id}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 #Endpoint to create a new highlight
@@ -301,16 +85,16 @@ def add_highlight():
 
         # Convert gamePk to string for consistency
         game_pk_str = str(data["gamePk"])
-        
+
         # Check if gamePk already exists
         doc_ref = db.collection("highlights").document(game_pk_str)
         if doc_ref.get().exists:
             return jsonify({"error": f"Highlight with gamePk {game_pk_str} already exists."}), 409  # 409 Conflict
 
         # Add timestamps to the record
-        data["gameDate"] = datetime.fromisoformat(data["gameDate"].replace("Z", "+00:00"))
-        data["updatedAt"] = datetime.utcnow()
-        data["createdAt"] = datetime.utcnow()
+        data["gameDate"] = datetime.fromisoformat(data["gameDate"].replace("Z", ISO_FORMAT))
+        data["updatedAt"] = datetime.now()
+        data["createdAt"] = datetime.now()
 
         # Insert into Firestore
         doc_ref.set(data)
@@ -477,13 +261,13 @@ def check_next_game(team_id, season):
                             "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc),
                             "createdAt": datetime.utcnow().replace(tzinfo=timezone.utc)
                         }
-                        
+
                         doc_ref.set(next_game)
                         print(f"Stored upcoming game {game_pk} in 'highlights' collection.")
 
                         # Publish event to Pub/Sub for game status tracking
                         publish_game_status_event(game_pk, game["gameDate"])
-                    
+
                     return next_game
 
         return None
@@ -495,16 +279,16 @@ def check_next_game(team_id, season):
 
 # Endpoint to process final game data and queue upcoming games
 @app.route("/highlights/process/<int:teamId>/<int:season>", methods=["GET"])
-def process_highlights(teamId, season):
+def process_highlights(team_id, season):
     """API endpoint to process past games and find next upcoming game"""
     try:
-        current_year = datetime.utcnow().year
+        current_year = datetime.now().year
 
         if season < current_year:
             return jsonify({"error": f"Invalid season: {season}. The season must be {current_year} or later."}), 400
 
-        past_highlights = process_past_games(teamId, season)
-        next_game = check_next_game(teamId, season)
+        past_highlights = process_past_games(team_id, season)
+        next_game = check_next_game(team_id, season)
 
         return jsonify({
             "processedHighlights": past_highlights,
@@ -517,28 +301,28 @@ def process_highlights(teamId, season):
 
 # Endpoint for updating highlights
 @app.route("/highlights/<string:gamePk>", methods=["PATCH"])
-def update_highlight(gamePk):
+def update_highlight(game_pk):
     """Update specific fields of an existing highlight without overwriting other fields."""
     try:
         # Parse incoming JSON payload
         update_data = request.get_json()
 
         # Reference the document in Firestore
-        doc_ref = db.collection("highlights").document(gamePk)
+        doc_ref = db.collection("highlights").document(game_pk)
         doc = doc_ref.get()
 
         # Check if document exists
         if not doc.exists:
-            return jsonify({"error": f"Highlight with gamePk {gamePk} not found"}), 404
+            return jsonify({"error": f"Highlight with gamePk {game_pk} not found"}), 404
 
         # Update Firestore document
-        update_data["updatedAt"] = datetime.utcnow().replace(tzinfo=timezone.utc)
+        update_data["updatedAt"] = datetime.now().replace(tzinfo=timezone.utc)
         doc_ref.update(update_data)
 
-        return jsonify({"message": f"Highlight {gamePk} updated successfully"}), 200
+        return jsonify({"message": f"Highlight {game_pk} updated successfully"}), 200
 
     except Exception as e:
-        print(f"Error updating highlight {gamePk}: {e}")
+        print(f"Error updating highlight {game_pk}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 # Main entry point

@@ -1,5 +1,6 @@
 .DS_Store
 apps/backend/.DS_Store
 apps/backend/api/.DS_Store
+.env
 .venv/*
 .idea/*
