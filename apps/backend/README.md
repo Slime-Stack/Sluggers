@@ -18,12 +18,12 @@ A RESTful Flask API for serving highlights and processing game data.
 │   ├── Dockerfile                 # (If using Docker for App Engine)
 │
 │── /cloud-functions               # Cloud Functions Directory
-│   ├── /process-game-status-event # Cloud Function 1 Directory
-│   │   ├── main.py                # Function for processing game status updates
+│   ├── /process-game-status-event # Function for processing game status updates
+│   │   ├── main.py                # Entry point for function
 │   │   ├── requirements.txt       # Dependencies
 │   │
-│   ├── /ai-processing-service     # Cloud Function 2 Directory
-│   │   ├── main.py                # Function for AI-powered content generation
+│   ├── /ai-processing-service     # Function for AI-powered content generation
+│   │   ├── main.py                # Entry point for function
 │   │   ├── requirements.txt       # Dependencies
 │
 │── README.md                      # Project Documentation
@@ -33,13 +33,6 @@ A RESTful Flask API for serving highlights and processing game data.
 ## **🌎 Environment Setup**
 ### **1️⃣ Prerequisites**
 - Install **Google Cloud SDK**: [Install Guide](https://cloud.google.com/sdk/docs/install)
-- Enable APIs in Google Cloud:
-  ```sh
-  gcloud services enable cloudfunctions.googleapis.com \
-    pubsub.googleapis.com \
-    firestore.googleapis.com \
-    artifactregistry.googleapis.com
-  ```
 - Authenticate with Google Cloud:
   ```sh
   gcloud auth application-default login
@@ -48,8 +41,8 @@ A RESTful Flask API for serving highlights and processing game data.
 ### **2️⃣ Setting Up Local Development**
 1. **Clone the repository**  
    ```sh
-   git clone https://github.com/your-repo/mlb-sluggers-backend.git
-   cd mlb-sluggers-backend/backend
+   git clone git@github.com:Slime-Stack/Sluggers.git
+   cd apps/backend
    ```
 2. **Setup Flask API**  
    ```sh
