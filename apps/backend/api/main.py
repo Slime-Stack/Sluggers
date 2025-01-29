@@ -1,13 +1,19 @@
 from flask import Flask, jsonify, request
 import requests
-from google.cloud import firestore
+import json 
+from google.cloud import firestore, pubsub_v1
 from datetime import datetime, timedelta, timezone
 
 # Initialize Firestore client
 db = firestore.Client(
-    project="slimeify",  # Your Google Cloud project ID
-    database="mlb-sluggers"  # Replace with your database name if it's not "(default)"
+    project="slimeify",  # Google Cloud project ID
+    database="mlb-sluggers"  # Must be declared if it's not "(default)"
 )
+
+# Initialize Pub/Sub Publisher
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
+
 app = Flask(__name__)
 
 # Function to construct the team logo URL
@@ -311,7 +317,10 @@ def add_highlight():
         print(f"Error adding highlight: {e}")
         return jsonify({"error": f"An internal error occurred - Error adding highlight: {str(e)}"}), 500
 
-# Variables and functions for processing schedule for highlights
+# PROCESSING HIGHLIGHTS
+# API edndpoint: /highlights/process/{teamId}
+# Variables and functions for processing MLB schedule for final and upcoming games
+
 MLB_API_BASE_URL = "https://statsapi.mlb.com/api/v1/schedule"
 
 def fetch_schedule(team_id, season):
@@ -323,92 +332,153 @@ def fetch_schedule(team_id, season):
         return None
     return response.json()
 
+# Function to publish message to Pub/Sub to kick off Gem/Imagen processing
+def trigger_ai_processing(game_pk):
+    """Publishes a message to Pub/Sub to start AI processing."""
+    message = json.dumps({"gamePk": game_pk}).encode("utf-8")
+    future = publisher.publish(topic_path, message)
+    print(f"AI Processing triggered for game {game_pk}, ID: {future.result()}")
+
 # Function to process past finalized games
 def process_past_games(team_id, season):
-    """Processes finalized past games and stores them in Firestore"""
+    """Processes finalized past games, updates status in Firestore, and triggers AI processing."""
     try:
         data = fetch_schedule(team_id, season)
         if not data or "dates" not in data:
             print(f"No data fetched for team {team_id}, season {season}.")
             return []
 
-        current_date = datetime.utcnow().replace(tzinfo=timezone.utc) 
         highlights = []
+        current_date = datetime.utcnow().replace(tzinfo=timezone.utc)
 
         for date_entry in data["dates"]:
             for game in date_entry["games"]:
+                game_pk_str = str(game["gamePk"])  # Convert gamePk to string
                 game_date = datetime.fromisoformat(game["gameDate"].replace("Z", "+00:00")).astimezone(timezone.utc)
+                game_status = game["status"].get("abstractGameState", "")
 
                 # Only process games that are Final
-                if game["status"].get("abstractGameState") == "Final":
-                    game_pk_str = str(game["gamePk"])  # Convert gamePk to string
-                    highlight = {
-                        "gamePk": game_pk_str,
-                        "gameDate": game["gameDate"],
-                        "homeTeam": {
-                            "team_id": game["teams"]["home"]["team"]["id"],
-                            "name": game["teams"]["home"]["team"]["name"],
-                            "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),  # Safe access
-                            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
-                        },
-                        "awayTeam": {
-                            "team_id": game["teams"]["away"]["team"]["id"],
-                            "name": game["teams"]["away"]["team"]["name"],
-                            "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),  # Safe access
-                            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
-                        },
-                        "status": game["status"]["detailedState"],
-                        "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc),
-                        "createdAt": datetime.utcnow().replace(tzinfo=timezone.utc),
-                    }
+                if game_status == "Final":
+                    doc_ref = db.collection("highlights").document(game_pk_str)
+                    doc_snapshot = doc_ref.get()
 
-                    # Save to Firestore
-                    db.collection("highlights").document(game_pk_str).set(highlight)
-                    highlights.append(highlight)
+                    if doc_snapshot.exists:
+                        stored_data = doc_snapshot.to_dict()
 
-        print(f"Processed {len(highlights)} highlights for team {team_id}.")
+                        # Update only if the status has changed
+                        if stored_data.get("status") != "Final":
+                            doc_ref.update({"status": "Final", "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc)})
+                            print(f"Updated game {game_pk_str} to Final in Firestore.")
+
+                            # Trigger AI Processing
+                            trigger_ai_processing(game_pk_str)
+                        else:
+                            print(f"Game {game_pk_str} already marked Final, skipping update.")
+
+                    else:
+                        # Insert new record
+                        highlight = {
+                            "gamePk": game_pk_str,
+                            "gameDate": game["gameDate"],
+                            "homeTeam": {
+                                "team_id": game["teams"]["home"]["team"]["id"],
+                                "name": game["teams"]["home"]["team"]["name"],
+                                "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
+                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+                            },
+                            "awayTeam": {
+                                "team_id": game["teams"]["away"]["team"]["id"],
+                                "name": game["teams"]["away"]["team"]["name"],
+                                "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
+                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+                            },
+                            "status": game["status"]["detailedState"],
+                            "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc),
+                            "createdAt": datetime.utcnow().replace(tzinfo=timezone.utc),
+                        }
+                        doc_ref.set(highlight)
+                        print(f"Inserted new game {game_pk_str} in Firestore.")
+
+                        # Trigger AI Processing
+                        trigger_ai_processing(game_pk_str)
+
+                    highlights.append(game_pk_str)
+
+        print(f"Processed {len(highlights)} finalized highlights for team {team_id}.")
         return highlights
 
     except Exception as e:
         print(f"Error processing past games: {e}")
         return []
 
+# Publishes a message when an upcoming game is detected
+def publish_game_status_event(game_pk, game_date, max_retries=3):
+    """Publishes a message to Pub/Sub with retry logic."""
+    message = json.dumps({"gamePk": game_pk, "gameDate": game_date}).encode("utf-8")
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            future = publisher.publish(topic_path, message)
+            message_id = future.result(timeout=10)  # Wait for a result
+            print(f"Successfully published game {game_pk} to Pub/Sub (Message ID: {message_id})")
+            return
+        except Exception as e:
+            print(f"Attempt {attempt}: Failed to publish Pub/Sub message for game {game_pk}. Error: {e}")
+            if attempt < max_retries:
+                wait_time = 2 ** attempt  # Exponential backoff (2s, 4s, 8s)
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"Failed to publish Pub/Sub message after {max_retries} attempts. Giving up.")
+
+# Checks for upcoming games & sends pubsub message
 def check_next_game(team_id, season):
-    """Finds the next upcoming game within the next 7 days"""
+    """Finds the next upcoming game within the next 7 days and stores it in the 'highlights' collection."""
     try:
         data = fetch_schedule(team_id, season)
         if not data or "dates" not in data:
+            print(f"No schedule data found for team {team_id}, season {season}.")
             return None
 
-        current_date = datetime.utcnow().replace(tzinfo=timezone.utc)  #  Make UTC-aware
+        current_date = datetime.utcnow().replace(tzinfo=timezone.utc)
         next_game = None
 
         for date_entry in data["dates"]:
             for game in date_entry["games"]:
-                game_date = datetime.fromisoformat(game["gameDate"].replace("Z", "+00:00")).astimezone(timezone.utc)  # Convert to UTC
+                game_date = datetime.fromisoformat(game["gameDate"].replace("Z", "+00:00")).astimezone(timezone.utc)
 
                 if game_date > current_date and game_date <= current_date + timedelta(days=7):
-                    next_game = {
-                        "gamePk": str(game["gamePk"]),
-                        "gameDate": game["gameDate"],
-                        "homeTeam": {
-                            "team_id": game["teams"]["home"]["team"]["id"],
-                            "name": game["teams"]["home"]["team"]["name"],
-                            "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),  # Safe access
-                            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
-                        },
-                        "awayTeam": {
-                            "team_id": game["teams"]["away"]["team"]["id"],
-                            "name": game["teams"]["away"]["team"]["name"],
-                            "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),  # Safe access
-                            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
-                        },
-                        "status": game["status"]["detailedState"],
-                        "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc)
-                    }
+                    game_pk = str(game["gamePk"])
+                    doc_ref = db.collection("highlights").document(game_pk)
 
-                    # Save/update in Firestore
-                    db.collection("next_games").document(str(game["gamePk"])).set(next_game)
+                    # Check if game already exists in Firestore
+                    if not doc_ref.get().exists:
+                        next_game = {
+                            "gamePk": game_pk,
+                            "gameDate": game["gameDate"],
+                            "homeTeam": {
+                                "team_id": game["teams"]["home"]["team"]["id"],
+                                "name": game["teams"]["home"]["team"]["name"],
+                                "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
+                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+                            },
+                            "awayTeam": {
+                                "team_id": game["teams"]["away"]["team"]["id"],
+                                "name": game["teams"]["away"]["team"]["name"],
+                                "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
+                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+                            },
+                            "status": game["status"]["detailedState"],
+                            "updatedAt": datetime.utcnow().replace(tzinfo=timezone.utc),
+                            "createdAt": datetime.utcnow().replace(tzinfo=timezone.utc)
+                        }
+                        
+                        doc_ref.set(next_game)
+                        print(f"Stored upcoming game {game_pk} in 'highlights' collection.")
+
+                        # Publish event to Pub/Sub for game status tracking
+                        publish_game_status_event(game_pk, game["gameDate"])
+                    
                     return next_game
 
         return None
@@ -417,32 +487,24 @@ def check_next_game(team_id, season):
         print(f"Error checking next game: {e}")
         return None
 
+
 # Endpoint to process final game data and queue upcoming games
 @app.route("/highlights/process/<int:teamId>/<int:season>", methods=["GET"])
 def process_highlights(teamId, season):
     """API endpoint to process past games and find next upcoming game"""
     try:
-        # Get the current year
         current_year = datetime.utcnow().year
 
-        # Validate the season
         if season < current_year:
-            return jsonify({
-                "error": f"Invalid season: {season}. The season must be the current year or later."
-            }), 400
+            return jsonify({"error": f"Invalid season: {season}. The season must be {current_year} or later."}), 400
 
-        # Process past games
         past_highlights = process_past_games(teamId, season)
-
-        # Check for the next game
         next_game = check_next_game(teamId, season)
 
-        response = {
+        return jsonify({
             "processedHighlights": past_highlights,
             "nextGame": next_game if next_game else "No upcoming games within 7 days."
-        }
-
-        return jsonify(response), 200
+        }), 200
 
     except Exception as e:
         print(f"Error processing highlights: {e}")
