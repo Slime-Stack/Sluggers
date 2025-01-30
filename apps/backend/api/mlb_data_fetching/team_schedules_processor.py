@@ -3,7 +3,7 @@ import requests
 from datetime import datetime, timedelta, timezone
 
 from apps.backend.api.database.sluggers_client import db
-from apps.backend.utils.constants import ISO_FORMAT, MLB_API_BASE_URL
+from apps.backend.utils.constants import ISO_FORMAT, MLB_SCHEDULE_API_BASE_URL
 
 # Function to construct the team logo URL
 def get_team_logo_url(team_id):
@@ -11,7 +11,7 @@ def get_team_logo_url(team_id):
 
 def fetch_schedule(team_id, season):
     """Fetches schedule data from MLB Stats API"""
-    url = f"{MLB_API_BASE_URL}?sportId=1&season={season}&teamId={team_id}"
+    url = f"{MLB_SCHEDULE_API_BASE_URL}?sportId=1&season={season}&teamId={team_id}"
     response = requests.get(url)
     if response.status_code != 200:
         print(f"Error fetching schedule: {response.text}")

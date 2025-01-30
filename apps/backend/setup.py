@@ -12,11 +12,12 @@ setup(
         'google-auth-oauthlib',
         'google-generativeai',
         'google-cloud-firestore',
-        'google-cloud-texttospeech'
+        'google-cloud-texttospeech',
+        'google-cloud-aiplatform'
     ],
     entry_points={
         'console_scripts': [
-            'sluggers=backend/api.__main__:main',
+            'sluggers=api.__main__:main',
         ],
     },
     description='An api for creating highlight sequences.',
