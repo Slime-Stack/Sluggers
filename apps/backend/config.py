@@ -1,11 +1,13 @@
 import os
 from dotenv import load_dotenv
 
+from apps.backend.utils.constants import PROJECT_ID, BUCKET_URI
+
 load_dotenv()  # Load environment variables from .env if present
 
-PROJECT_ID = os.getenv("PROJECT_ID")
+PROJECT_ID = PROJECT_ID
 REGION = os.getenv("REGION", "us-central1")
-BUCKET_URI = os.getenv("BUCKET_URI")
+BUCKET_URI = BUCKET_URI
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not PROJECT_ID:

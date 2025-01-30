@@ -1,6 +1,8 @@
 gunicorn
 pytz
 google-cloud
+google-generativeai
+google
 google-cloud-pubsub
 functions-framework
 requests~=2.32.3

@@ -1,8 +1,7 @@
 import google.generativeai as genai
 from google.cloud import texttospeech
 from vertexai.preview.vision_models import ImageGenerationModel
-from apps.config import GEMINI_API_KEY
-
+from apps.backend.config import GEMINI_API_KEY
 
 class GenerativeModelConfig:
 
