@@ -246,9 +246,14 @@ def get_highlights(teamId):
         # Combine results from both queries
         results = []
         for doc in query:
-            results.append(doc.to_dict())
+            highlight = doc.to_dict()
+            if "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
+                results.append(highlight)
+
         for doc in query_away:
-            results.append(doc.to_dict())
+            highlight = doc.to_dict()
+            if "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
+                results.append(highlight)
 
         # Remove duplicates (if any) based on gamePk
         results = {item["gamePk"]: item for item in results}.values()

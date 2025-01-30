@@ -2,6 +2,11 @@ import functions_framework
 import json
 import requests
 from google.cloud import storage, firestore
+from google.auth import default
+from google.cloud import pubsub_v1
+
+# Automatically retrieves the best available credentials
+credentials, project = default()
 
 # Initialize Firestore and Cloud Storage
 db = firestore.Client(project="slimeify")
