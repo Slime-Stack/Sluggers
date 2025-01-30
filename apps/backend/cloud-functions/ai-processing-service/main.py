@@ -1,20 +1,13 @@
 import functions_framework
 import json
 import base64
-import requests
 from google.cloud import firestore, pubsub_v1
 from google.auth import default
 
+from apps.backend.api.database.sluggers_client import db
+
 # Automatically retrieves the best available credentials
 credentials, project = default()
-
-# Initialize Firestore and Pub/Sub
-# Initialize Firestore and Pub/Sub
-db = firestore.Client(
-    project="slimeify",  # Google Cloud project ID
-    database="mlb-sluggers"  # Must be declared if it's not "(default)"
-)
-publisher = pubsub_v1.PublisherClient()
 
 @functions_framework.cloud_event
 def ai_processing_service(cloud_event):
