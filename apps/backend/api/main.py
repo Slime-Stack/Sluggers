@@ -1,10 +1,19 @@
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
+from google.cloud import firestore, pubsub_v1
 
-from apps.backend.api.database.sluggers_client import db
 from apps.backend.api.mlb_data_fetching.team_schedules_processor import process_past_games, check_next_game
-from apps.backend.utils.constants import ISO_FORMAT, TEAMS
+from apps.backend.utils.constants import PROJECT_ID, DATABASE_ID, TEAMS, ISO_FORMAT
+
+# Initialize Firestore client
+db = firestore.Client(
+    project = PROJECT_ID,  # Your Google Cloud project ID
+    database = DATABASE_ID
+)
+# Initialize Pub/Sub Publisher
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
 
 app = Flask(__name__)
 
@@ -14,7 +23,7 @@ def get_teams():
     return jsonify(TEAMS), 200
 
 # Endpoint to fetch highlights for a specific team
-@app.route("/highlights/<int:teamId>", methods=["GET"])
+@app.route("/highlights/<int:team_id>", methods=["GET"])
 def get_highlights(team_id):
     try:
         highlights_ref = db.collection("highlights")
@@ -87,8 +96,8 @@ def add_highlight():
 
         # Add timestamps to the record
         data["gameDate"] = datetime.fromisoformat(data["gameDate"].replace("Z", ISO_FORMAT))
-        data["updatedAt"] = datetime.now()
-        data["createdAt"] = datetime.now()
+        data["updatedAt"] = datetime.utcnow()
+        data["createdAt"] = datetime.utcnow()
 
         # Insert into Firestore
         doc_ref.set(data)
@@ -101,29 +110,77 @@ def add_highlight():
         return jsonify({"error": f"An internal error occurred - Error adding highlight: {str(e)}"}), 500
 
 # Endpoint to process final game data and queue upcoming games
-@app.route("/highlights/process/<int:teamId>/<int:season>", methods=["GET"])
-def process_highlights(team_id, season):
-    """API endpoint to process past games and find next upcoming game"""
+@app.route("/highlights/process/<int:season>/<int:team_id>", methods=["GET"])
+def process_highlights(season, date=None, team_id=None):
+    """API endpoint to process past games for a specific season, requiring a date and optionally filtering by team."""
     try:
-        current_year = datetime.now().year
+        # Get required date param
+        date_param = request.args.get("date")
+        if not date_param:
+            return jsonify({"error": "Missing required parameter: date (YYYY-MM-DD)"}), 400
 
-        if season < current_year:
-            return jsonify({"error": f"Invalid season: {season}. The season must be {current_year} or later."}), 400
+        # Validate date format
+        try:
+            datetime.strptime(date_param, "%Y-%m-%d")  # Validate format
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
 
-        past_highlights = process_past_games(team_id, season)
-        next_game = check_next_game(team_id, season)
+        # Get optional team filter
+        team_param = request.args.get("teamId")
+        team_id = int(team_param) if team_param else None
 
-        return jsonify({
+        # Process past games for the specific date (team filter is optional)
+        past_highlights = process_past_games(season, date_param, team_id)
+
+        response = {
             "processedHighlights": past_highlights,
-            "nextGame": next_game if next_game else "No upcoming games within 7 days."
-        }), 200
+            "message": f"Highlights processed for {date_param} {f'and team {team_id}' if team_id else ''}"
+        }
+
+        return jsonify(response), 200
 
     except Exception as e:
         print(f"Error processing highlights: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
+# @app.route("/highlights/process/<int:season>/<:date>/<int:team_id>/", methods=["GET"])
+# def process_highlights(season, team_id):
+#     """API endpoint to process past games and find next upcoming game"""
+#     try:
+#         # current_year = datetime.utcnow().year
+#
+#         # if season < current_year:
+#         #     return jsonify({"error": f"Invalid season: {season}. The season must be {current_year} or later."}), 400
+#
+#         # Get required date param
+#         date_param = request.args.get("date")
+#         if not date_param:
+#             return jsonify({"error": "Missing required parameter: date (YYYY-MM-DD)"}), 400
+#
+#         # Validate date format
+#         try:
+#             datetime.strptime(date_param, "%Y-%m-%d")  # Validate format
+#         except ValueError:
+#             return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+#
+#         # # Get optional team filter
+#         # team_param = request.args.get("teamId")
+#         # team_id = int(team_param) if team_param else None
+#
+#         past_highlights = process_past_games(season, date_param, team_id)
+#         next_game = check_next_game(season, date_param, team_id)
+#
+#         return jsonify({
+#             "processedHighlights": past_highlights,
+#             "nextGame": next_game if next_game else "No upcoming games within 7 days."
+#         }), 200
+#
+#     except Exception as e:
+#         print(f"Error processing highlights: {e}")
+#         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
+
 # Endpoint for updating highlights
-@app.route("/highlights/<string:gamePk>", methods=["PATCH"])
+@app.route("/highlights/<string:game_pk>", methods=["PATCH"])
 def update_highlight(game_pk):
     """Update specific fields of an existing highlight without overwriting other fields."""
     try:
@@ -139,7 +196,7 @@ def update_highlight(game_pk):
             return jsonify({"error": f"Highlight with gamePk {game_pk} not found"}), 404
 
         # Update Firestore document
-        update_data["updatedAt"] = datetime.now().replace(tzinfo=timezone.utc)
+        update_data["updatedAt"] = datetime.utcnow().replace(tzinfo=timezone.utc)
         doc_ref.update(update_data)
 
         return jsonify({"message": f"Highlight {game_pk} updated successfully"}), 200
