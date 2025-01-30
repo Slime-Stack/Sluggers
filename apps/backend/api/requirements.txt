@@ -1,7 +1,0 @@
-flask
-gunicorn
-requests
-pytz
-functions-framework
-google-cloud-firestore
-google-cloud-pubsub
