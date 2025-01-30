@@ -13,7 +13,8 @@ setup(
         'google-generativeai',
         'google-cloud-firestore',
         'google-cloud-texttospeech',
-        'google-cloud-aiplatform'
+        'google-cloud-aiplatform',
+        'google-cloud-pubsub'
     ],
     entry_points={
         'console_scripts': [

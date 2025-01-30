@@ -1,6 +1,8 @@
 gunicorn
 pytz
 google-cloud
+google-cloud-pubsub
+functions-framework
 requests~=2.32.3
 flask~=3.1.0
 google~=3.0.0
