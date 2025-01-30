@@ -10,7 +10,10 @@ from google.cloud import pubsub_v1
 credentials, project = default()
 
 # Initialize Firestore and Pub/Sub
-db = firestore.Client(project="slimeify")
+db = firestore.Client(
+    project="slimeify",  # Google Cloud project ID
+    database="mlb-sluggers"  # Must be declared if it's not "(default)"
+)
 publisher = pubsub_v1.PublisherClient()
 ai_processing_topic = publisher.topic_path("slimeify", "sluggers-ai-processing")
 
