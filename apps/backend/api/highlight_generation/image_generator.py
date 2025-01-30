@@ -1,7 +1,7 @@
 from google.cloud import aiplatform
 
 from apps.backend.api.genai.generative_model_config import GenerativeModelConfig
-from apps.config import PROJECT_ID, REGION, BUCKET_URI
+from apps.backend.config import PROJECT_ID, REGION, BUCKET_URI
 
 class ImageGenerator:
     """

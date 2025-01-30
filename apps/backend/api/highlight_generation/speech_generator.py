@@ -1,7 +1,8 @@
 import io
 from google.cloud import texttospeech
-from apps.config import BUCKET_URI
+from apps.backend.config import BUCKET_URI
 from apps.backend.utils.gcs_utils import upload_blob_from_stream
+from apps.backend.api.genai.generative_model_config import GenerativeModelConfig
 
 class SpeechGenerator:
     """
@@ -13,8 +14,9 @@ class SpeechGenerator:
     AUDIO_FILE_NAME_SUFFIX = ".mp3"
 
     def __init__(self):
-        self.tts_client = texttospeech.TextToSpeechClient()
-        self._build_output_file_name(self.scene_id)
+        self.OUTPUT_FILE_NAME = None
+        self.tts_client = GenerativeModelConfig().tts_client
+        self.build_output_file_name(self.scene_id)
 
 
     def synthesize_highlight_from_ssml(self, text: str) -> None:
@@ -50,5 +52,5 @@ class SpeechGenerator:
         upload_blob_from_stream(bucket_name, file_obj, self.OUTPUT_FILE_NAME)
 
 
-    def _build_output_file_name(self, scene_id):
+    def build_output_file_name(self, scene_id):
         self.OUTPUT_FILE_NAME = f"{self.AUDIO_FILE_NAME_PREFIX}{scene_id}{self.AUDIO_FILE_NAME_SUFFIX}"

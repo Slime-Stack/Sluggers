@@ -5,8 +5,8 @@ from apps.backend.utils.constants import MLB_STATS_API_BASE_URL
 MIDDLE_URL_SEGMENT = "v1.1/game/"
 GAME_FEED_ENDPOINT = "feed/live"
 
-def fetch_single_game_data(self, game_pk):
-    url = self._game_url_builder(game_pk)
+def fetch_single_game_data(game_pk):
+    url = _game_url_builder(game_pk)
     response = requests.get(url)
     return response.json()
 
@@ -46,5 +46,5 @@ def extract_game_overview(data):
     }
     return overview
 
-def _game_url_builder(self, game_pk):
-    return f"{MLB_STATS_API_BASE_URL}{self.MIDDLE_URL_SEGMENT}{game_pk}{self.GAME_FEED_ENDPOINT}"
+def _game_url_builder(game_pk):
+    return f"{MLB_STATS_API_BASE_URL}{MIDDLE_URL_SEGMENT}{game_pk}{GAME_FEED_ENDPOINT}"

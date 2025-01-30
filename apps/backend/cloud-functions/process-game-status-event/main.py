@@ -4,9 +4,17 @@ import json
 import functions_framework
 import requests
 from google.auth import default
+from google.cloud import firestore, pubsub_v1
 
-from apps.backend.api.database.sluggers_client import db
-from apps.backend.utils.pubsub_utils import publisher, ai_processing_topic
+db = firestore.Client(
+    project = "slimeify",  # Your Google Cloud project ID
+    database = "mlb-sluggers"
+)
+
+# Initialize Pub/Sub Publisher
+publisher = pubsub_v1.PublisherClient()
+game_status_topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
+ai_processing_topic = publisher.topic_path("slimeify", "sluggers-ai-processing")
 
 # Automatically retrieves the best available credentials
 credentials, project = default()

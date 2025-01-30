@@ -1,10 +1,13 @@
 import functions_framework
 import json
 import base64
-from google.cloud import firestore, pubsub_v1
+from google.cloud import firestore
 from google.auth import default
 
-from apps.backend.api.database.sluggers_client import db
+db = firestore.Client(
+    project = "slimeify",  # Your Google Cloud project ID
+    database = "mlb-sluggers"
+)
 
 # Automatically retrieves the best available credentials
 credentials, project = default()
@@ -26,17 +29,14 @@ def ai_processing_service(cloud_event):
 
         print(f"Starting AI processing for game {game_pk}...")
 
-        # Simulate AI-generated assets
-        bucket_name = "mlb-sluggers-assets"
-        image_url = f"https://storage.googleapis.com/{bucket_name}/game_{game_pk}_highlight.jpg"
-        audio_url = f"https://storage.googleapis.com/{bucket_name}/game_{game_pk}_audio.mp3"
-
         # Firestore update with retry logic
         max_retries = 3
         for attempt in range(1, max_retries + 1):
             try:
                 #Everything works this is commented out so things dont overwrite a valid record while testing
                 #doc_ref = db.collection("highlights").document(str(game_pk))
+
+                # storyboard =
 
                 #doc_ref.update({
                 #    "storyboard": [put the good stuff in here]
