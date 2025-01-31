@@ -3,13 +3,14 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, request
 from google.cloud import firestore, pubsub_v1
 
+from apps.backend.api.highlight_generation.highlight_generator import generate_game_highlights
 from apps.backend.api.mlb_data_fetching.team_schedules_processor import process_past_games, check_next_game
 from apps.backend.utils.constants import PROJECT_ID, DATABASE_ID, TEAMS, ISO_FORMAT
 
 # Initialize Firestore client
 db = firestore.Client(
-    project = PROJECT_ID,  # Your Google Cloud project ID
-    database = DATABASE_ID
+    project=PROJECT_ID,  # Your Google Cloud project ID
+    database=DATABASE_ID
 )
 # Initialize Pub/Sub Publisher
 publisher = pubsub_v1.PublisherClient()
@@ -17,10 +18,12 @@ topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
 
 app = Flask(__name__)
 
+
 # Endpoint to fetch all MLB teams
 @app.route("/teams", methods=["GET"])
 def get_teams():
     return jsonify(TEAMS), 200
+
 
 # Endpoint to fetch highlights for a specific team
 @app.route("/highlights/<int:team_id>", methods=["GET"])
@@ -58,7 +61,8 @@ def get_highlights(team_id):
         print(f"Error fetching highlights for team {team_id}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
-#Endpoint to create a new highlight
+
+# Endpoint to create a new highlight
 @app.route("/highlights", methods=["POST"])
 def add_highlight():
     try:
@@ -82,7 +86,8 @@ def add_highlight():
         # Validate each storyboard item
         for item in data["storyboard"]:
             if "storyTitle" not in item or "teaserSummary" not in item or "scenes" not in item:
-                return jsonify({"error": "Each storyboard must include 'storyTitle', 'teaserSummary', and 'scenes'."}), 400
+                return jsonify(
+                    {"error": "Each storyboard must include 'storyTitle', 'teaserSummary', and 'scenes'."}), 400
             if not isinstance(item["scenes"], list):
                 return jsonify({"error": "Each storyboard's 'scenes' must be an array."}), 400
 
@@ -109,6 +114,7 @@ def add_highlight():
         print(f"Error adding highlight: {e}")
         return jsonify({"error": f"An internal error occurred - Error adding highlight: {str(e)}"}), 500
 
+
 # Endpoint to process final game data and queue upcoming games
 @app.route("/highlights/process/<int:season>/<int:team_id>", methods=["GET"])
 def process_highlights(season, date=None, team_id=None):
@@ -131,9 +137,11 @@ def process_highlights(season, date=None, team_id=None):
 
         # Process past games for the specific date (team filter is optional)
         past_highlights = process_past_games(season, date_param, team_id)
+        next_game = check_next_game(season, date_param, team_id)
 
         response = {
             "processedHighlights": past_highlights,
+            "nextGame": next_game if next_game else "No upcoming games within 7 days.",
             "message": f"Highlights processed for {date_param} {f'and team {team_id}' if team_id else ''}"
         }
 
@@ -143,7 +151,12 @@ def process_highlights(season, date=None, team_id=None):
         print(f"Error processing highlights: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
-# @app.route("/highlights/process/<int:season>/<:date>/<int:team_id>/", methods=["GET"])
+
+@app.route("/highlights/generate/<string:game_pk>", methods=["GET"])
+def generate_highlights(game_pk):
+    return generate_game_highlights(game_pk)
+
+
 # def process_highlights(season, team_id):
 #     """API endpoint to process past games and find next upcoming game"""
 #     try:
@@ -180,6 +193,7 @@ def process_highlights(season, date=None, team_id=None):
 #         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 # Endpoint for updating highlights
+
 @app.route("/highlights/<string:game_pk>", methods=["PATCH"])
 def update_highlight(game_pk):
     """Update specific fields of an existing highlight without overwriting other fields."""
@@ -204,6 +218,7 @@ def update_highlight(game_pk):
     except Exception as e:
         print(f"Error updating highlight {game_pk}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
+
 
 # Main entry point
 if __name__ == "__main__":

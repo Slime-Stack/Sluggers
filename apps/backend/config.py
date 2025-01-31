@@ -9,6 +9,7 @@ PROJECT_ID = PROJECT_ID
 REGION = os.getenv("REGION", "us-central1")
 BUCKET_URI = BUCKET_URI
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SLIME_API_BASE_URL = os.getenv("SLIME_API_BASE_URL")
 
 if not PROJECT_ID:
     raise ValueError("PROJECT_ID environment variable is not set.")
