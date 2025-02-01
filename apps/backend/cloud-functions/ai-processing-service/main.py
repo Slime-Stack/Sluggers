@@ -8,13 +8,14 @@ from google.auth import default
 from google.cloud import firestore
 
 db = firestore.Client(
-    project = "slimeify",  # Your Google Cloud project ID
-    database = "mlb-sluggers"
+    project="slimeify",  # Your Google Cloud project ID
+    database="mlb-sluggers"
 )
 
 API_BASE_URL = os.getenv("SLIME_API_BASE_URL")
 # Automatically retrieves the best available credentials
 credentials, project = default()
+
 
 @functions_framework.cloud_event
 def ai_processing_service(cloud_event):
@@ -38,8 +39,8 @@ def ai_processing_service(cloud_event):
         for attempt in range(1, max_retries + 1):
             try:
                 # Call the Flask API endpoint
-                response = requests.get(f"{API_BASE_URL}/highlights/generate/{game_pk}")
-                
+                response = requests.get(f"{API_BASE_URL}highlights/generate/{game_pk}")
+
                 if response.status_code != 200:
                     raise Exception(f"API call failed with status {response.status_code}: {response.text}")
 
