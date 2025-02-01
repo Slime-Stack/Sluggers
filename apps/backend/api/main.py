@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
@@ -58,7 +59,7 @@ def get_highlights(team_id):
 
     except Exception as e:
         # Log and return the error
-        print(f"Error fetching highlights for team {team_id}: {e}")
+        logging.error(msg=f"Error fetching highlights for team {team_id}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 
@@ -111,7 +112,7 @@ def add_highlight():
 
     except Exception as e:
         # Log and return the error
-        print(f"Error adding highlight: {e}")
+        logging.error(f"Error adding highlight: {e}")
         return jsonify({"error": f"An internal error occurred - Error adding highlight: {str(e)}"}), 500
 
 
@@ -148,49 +149,20 @@ def process_highlights(season, date=None, team_id=None):
         return jsonify(response), 200
 
     except Exception as e:
-        print(f"Error processing highlights: {e}")
+        logging.error(f"Error processing highlights: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 
 @app.route("/highlights/generate/<string:game_pk>", methods=["GET"])
 def generate_highlights(game_pk):
-    return generate_game_highlights(game_pk)
+    try:
+        generated_highlights = generate_game_highlights(game_pk)
+        return jsonify(generated_highlights), 200
+    except Exception as e:
+        # Log and return the error
+        logging.error(f"Error generating highlights for game_pk: {game_pk}: {e}")
+        return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
-
-# def process_highlights(season, team_id):
-#     """API endpoint to process past games and find next upcoming game"""
-#     try:
-#         # current_year = datetime.utcnow().year
-#
-#         # if season < current_year:
-#         #     return jsonify({"error": f"Invalid season: {season}. The season must be {current_year} or later."}), 400
-#
-#         # Get required date param
-#         date_param = request.args.get("date")
-#         if not date_param:
-#             return jsonify({"error": "Missing required parameter: date (YYYY-MM-DD)"}), 400
-#
-#         # Validate date format
-#         try:
-#             datetime.strptime(date_param, "%Y-%m-%d")  # Validate format
-#         except ValueError:
-#             return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
-#
-#         # # Get optional team filter
-#         # team_param = request.args.get("teamId")
-#         # team_id = int(team_param) if team_param else None
-#
-#         past_highlights = process_past_games(season, date_param, team_id)
-#         next_game = check_next_game(season, date_param, team_id)
-#
-#         return jsonify({
-#             "processedHighlights": past_highlights,
-#             "nextGame": next_game if next_game else "No upcoming games within 7 days."
-#         }), 200
-#
-#     except Exception as e:
-#         print(f"Error processing highlights: {e}")
-#         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 # Endpoint for updating highlights
 
@@ -216,7 +188,7 @@ def update_highlight(game_pk):
         return jsonify({"message": f"Highlight {game_pk} updated successfully"}), 200
 
     except Exception as e:
-        print(f"Error updating highlight {game_pk}: {e}")
+        logging.error(f"Error updating highlight {game_pk}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 
