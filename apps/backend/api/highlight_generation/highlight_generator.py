@@ -1,83 +1,78 @@
-import json
+import logging
+import time
 
 from google.cloud import firestore
 
-from apps.backend.api.highlight_generation.image_generator import ImageGenerator
-from apps.backend.api.highlight_generation.speech_generator import SpeechGenerator
-from apps.backend.api.highlight_generation.storyboard_generator import tell_the_plays_as_a_story, \
-    generate_storyboard_prompts
+from apps.backend.api.highlight_generation.storyboard_generator import build_story_board
 from apps.backend.api.mlb_data_fetching.gumbo_processor import fetch_single_game_data, extract_play_by_play, \
     extract_game_overview
 from apps.backend.api.mlb_data_fetching.team_schedules_processor import get_current_datetime
-from apps.backend.utils.constants import BUCKET_URI, PROJECT_ID, DATABASE_ID
 
-db = firestore.Client(
-    project = PROJECT_ID,  # Your Google Cloud project ID
-    database = DATABASE_ID
+# Configure detailed logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+logger = logging.getLogger(__name__)
+
+db = firestore.Client(
+    project="slimeify",  # Your Google Cloud project ID
+    database="mlb-sluggers"
+)
+
+
 def generate_game_highlights(game_pk_str):
-    """Generate highlights for a finalized game."""
+    """Generate highlights for a finalized game with rate limit handling."""
+    logger.info(f"Starting highlight generation for game {game_pk_str}")
     try:
-        # Fetch detailed game data
+        # Fetch game data with detailed logging
         game_data = fetch_single_game_data(game_pk_str)
+        logger.info("Successfully fetched game data")
+
+        logger.info("Extracting play-by-play data...")
         play_by_play = extract_play_by_play(game_data)
+        logger.info(f"Extracted {len(play_by_play)} plays")
+        logger.info("Extracting game overview...")
         game_overview = extract_game_overview(game_data)
-
-        # Generate story and prompts
-        # tell_the_plays_as_a_story returns a JSON string
-        story_json_str = tell_the_plays_as_a_story(play_by_play)
-        if not story_json_str:
-            raise Exception("Failed to generate story from play data")
-
-        # generate_storyboard_prompts expects and returns a JSON string
-        storyboard_json_str = generate_storyboard_prompts(story_json_str)
-        if not storyboard_json_str:
-            raise Exception("Failed to generate storyboard prompts")
-
-        # Parse the JSON string into a Python dict
+        # Build storyboard with rate limit handling
+        logger.info("Building storyboard...")
         try:
-            storyboard = json.loads(storyboard_json_str)
-        except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse storyboard JSON: {e}")
+            storyboard = build_story_board(play_by_play, game_overview, game_pk_str)
+            logger.info("Successfully built storyboard")
+            # logger.debug("First scene: %s", storyboard.scenes[0] if storyboard.scenes else 'No scenes')
+        except Exception as e:
+            if "429" in str(e):
+                logger.error("Rate limit hit during storyboard generation. Waiting before retry...")
+                time.sleep(60)  # Wait 60 seconds before retry
+                storyboard = build_story_board(play_by_play, game_overview, game_pk_str)
+            else:
+                raise
 
-        # Initialize generators
-        image_gen = ImageGenerator()
-        speech_gen = SpeechGenerator()
-
-        # Process each scene
-        processed_scenes = []
-        for scene in storyboard.get('scenes', []):
-            # Generate image
-            if scene.get('imagenPrompt'):
-                image = image_gen.generate_image_from_prompt(scene['imagenPrompt'])
-                if image:
-                    scene['imageUrl'] = image.url
-
-            # Generate audio for each language
-            for lang in ['en', 'es', 'ja']:
-                caption_key = f'caption_{lang}'
-                audio_key = f'audioUrl_{lang}'
-                if scene.get(caption_key):
-                    speech_gen.scene_id = f"{game_pk_str}_{scene['sceneNumber']}_{lang}"
-                    speech_gen.build_output_file_name(speech_gen.scene_id)  # Initialize the output filename
-                    speech_gen.synthesize_highlight_from_ssml(scene[caption_key])
-                    scene[audio_key] = f"{BUCKET_URI}/{speech_gen.OUTPUT_FILE_NAME}"
-
-            processed_scenes.append(scene)
-
-        # Update Firestore with processed storyboard
-        print(f"this is the first processed scene {processed_scenes[0]}")
+        # Update Firestore
+        logger.debug("Updating Firestore...")
         doc_ref = db.collection("highlights").document(game_pk_str)
         doc_ref.update({
-            "storyboard": processed_scenes,
-            "gameOverview": game_overview,
+            "storyboard": storyboard,
             "updatedAt": get_current_datetime()
         })
+        logger.info("Successfully updated Firestore")
 
-        print(f"Successfully generated highlights for game {game_pk_str}")
-        return processed_scenes
+        return storyboard
 
     except Exception as e:
-        print(f"Error generating highlights for game {game_pk_str}: {e}")
-        # You might want to add error handling or retry logic here
+        logger.error(f"Error generating highlights for game {game_pk_str}: {str(e)}", exc_info=True)
+        if "429" in str(e):
+            logger.error("Rate limit exceeded. Consider implementing backoff strategy.")
+        raise
+
+
+if __name__ == "__main__":
+    logging.info("Starting highlight generation test...")
+    try:
+        test_storyboard = generate_game_highlights("775294")
+        logging.info("Highlight generation completed successfully")
+        logging.debug("Generated storyboard: %s", f"{test_storyboard}")
+    except Exception as e:
+        logging.error("Highlight generation test failed", exc_info=True)
