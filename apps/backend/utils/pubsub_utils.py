@@ -2,17 +2,19 @@ import json
 import time
 
 from google.cloud import pubsub_v1
+from google.auth import default
 
+credentials, project = default()
 # Initialize Pub/Sub Publisher
 publisher = pubsub_v1.PublisherClient()
-game_status_topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
+game_status_topic = publisher.topic_path("slimeify", "sluggers-process-game-status")
 ai_processing_topic = publisher.topic_path("slimeify", "sluggers-ai-processing")
 
 # Function to publish message to Pub/Sub to kick off Gem/Imagen processing
 def trigger_ai_processing(game_pk):
     """Publishes a message to Pub/Sub to start AI processing."""
     message = json.dumps({"gamePk": game_pk}).encode("utf-8")
-    future = publisher.publish(game_status_topic_path, message)
+    future = publisher.publish(ai_processing_topic, message)
     print(f"AI Processing triggered for game {game_pk}, ID: {future.result()}")
 
 # Publishes a message when an upcoming game is detected
@@ -22,7 +24,7 @@ def publish_game_status_event(game_pk, game_date, max_retries=3):
 
     for attempt in range(1, max_retries + 1):
         try:
-            future = publisher.publish(game_status_topic_path, message)
+            future = publisher.publish(game_status_topic, message)
             message_id = future.result(timeout=10)  # Wait for a result
             print(f"Successfully published game {game_pk} to Pub/Sub (Message ID: {message_id})")
             return

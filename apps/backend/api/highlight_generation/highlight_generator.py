@@ -1,6 +1,7 @@
 import logging
 import time
 
+from flask import jsonify
 from google.cloud import firestore
 
 from apps.backend.api.highlight_generation.storyboard_generator import build_story_board
@@ -71,7 +72,7 @@ def generate_game_highlights(game_pk_str):
 if __name__ == "__main__":
     logging.info("Starting highlight generation test...")
     try:
-        test_storyboard = generate_game_highlights("775294")
+        test_storyboard = jsonify(generate_game_highlights("775294"))
         logging.info("Highlight generation completed successfully")
         logging.debug("Generated storyboard: %s", f"{test_storyboard}")
     except Exception as e:
