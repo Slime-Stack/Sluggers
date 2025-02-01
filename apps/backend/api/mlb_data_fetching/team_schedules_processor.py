@@ -64,10 +64,10 @@ db = firestore.Client(
 #         print(f"Error processing past games: {e}")
 #         return []
 
-def process_past_games(season, date, team_id):
+def process_past_games(season, team_id, date):
     """Processes finalized past games, updates status in Firestore, and triggers AI processing."""
     try:
-        data = _fetch_schedule(season, date, team_id)
+        data = _fetch_schedule(season, team_id, date)
         if not data or "dates" not in data:
             print(f"No data fetched for season {season}, date {date}, team {team_id}.")
             return []
@@ -85,10 +85,10 @@ def process_past_games(season, date, team_id):
         return []
 
 # Checks for upcoming games & sends pubsub message
-def check_next_game(season, date, team_id):
+def check_next_game(season, team_id, date):
     """Finds the next upcoming game within the next 7 days and stores it in the 'highlights' collection."""
     try:
-        data = _fetch_schedule(team_id, date, season)
+        data = _fetch_schedule(season,team_id, date)
         if not data or "dates" not in data:
             print(f"No schedule data found for team {team_id}, season {season}.")
             return None
@@ -207,12 +207,9 @@ def _get_team_logo_url(team_id):
     return f"{MLB_LOGOS_URL}{team_id}.svg"
 
 # Function to construct the team logo URL
-def _fetch_schedule(season, date, team_id=None):
+def _fetch_schedule(season, team_id, date):
     """Fetches schedule data from MLB Stats API, filtering by required date and optional team."""
-    url = f"{MLB_SCHEDULE_API_BASE_URL}?sportId=1&season={season}&date={date}"
-
-    if team_id:
-        url += f"&teamId={team_id}"
+    url = f"{MLB_SCHEDULE_API_BASE_URL}?sportId=1&season={season}&teamId={team_id}&date={date}"
 
     response = requests.get(url)
     if response.status_code != 200:

@@ -5,3 +5,4 @@ apps/backend/api/slimeify-418ca51fd7e7.json
 .env
 .venv/*
 .idea/*
+apps/backend/.env.yaml

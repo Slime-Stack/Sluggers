@@ -117,8 +117,8 @@ def add_highlight():
 
 
 # Endpoint to process final game data and queue upcoming games
-@app.route("/highlights/process/<int:season>/<int:team_id>", methods=["GET"])
-def process_highlights(season, date=None, team_id=None):
+@app.route("/highlights/process/<int:season>/", methods=["GET"])
+def process_highlights(season):
     """API endpoint to process past games for a specific season, requiring a date and optionally filtering by team."""
     try:
         # Get required date param
@@ -137,8 +137,8 @@ def process_highlights(season, date=None, team_id=None):
         team_id = int(team_param) if team_param else None
 
         # Process past games for the specific date (team filter is optional)
-        past_highlights = process_past_games(season, date_param, team_id)
-        next_game = check_next_game(season, date_param, team_id)
+        past_highlights = process_past_games(season, team_id, date_param)
+        next_game = check_next_game(season, team_id, date_param)
 
         response = {
             "processedHighlights": past_highlights,
