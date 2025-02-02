@@ -47,14 +47,16 @@ def upload_image_to_gcs(prompt: str, game_pk: str, scene_number: int, is_story_i
         bucket = storage_client.bucket(bucket_name)
         image_name = f"game_{game_pk}_{'story' if is_story_image else f'scene_{scene_number}'}.png"
         blob = bucket.blob(image_name)
-        
+
+        # Convert image to byte stream
+        image_bytes = io.BytesIO()
+        scene_image.save(image_bytes, format="PNG")  # Explicitly save as PNG
+        image_bytes.seek(0)  # Ensure the file pointer is at the start
+
         # Upload the image
-        blob.upload_from_string(
-            scene_image.as_bytes(),
-            content_type="image/png"
-        )
-        
-        logger.info(f"Successfully uploaded image: {image_name}")
+        blob.upload_from_file(image_bytes, content_type="image/png")
+
+    logger.info(f"Successfully uploaded image: {image_name}")
         return f"gs://{bucket_name}/{image_name}"
         
     except Exception as e:
