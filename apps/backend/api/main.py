@@ -6,7 +6,8 @@ from google.cloud import firestore, pubsub_v1
 
 from apps.backend.api.highlight_generation.highlight_generator import generate_game_highlights
 from apps.backend.api.mlb_data_fetching.team_schedules_processor import process_past_games, check_next_game
-from apps.backend.utils.constants import PROJECT_ID, DATABASE_ID, TEAMS, ISO_FORMAT
+from apps.backend.config import PROJECT_ID, DATABASE_ID
+from apps.backend.utils.constants import TEAMS, ISO_FORMAT
 
 # Initialize Firestore client
 db = firestore.Client(
@@ -143,8 +144,8 @@ def process_highlights(season):
         team_id = int(team_param) if team_param else None
 
         # Process past games for the specific date (team filter is optional)
-        past_highlights = process_past_games(season, team_id, date_param)
-        next_game = check_next_game(season, team_id, date_param)
+        past_highlights = process_past_games(season, date_param, team_id)
+        next_game = check_next_game(season, date_param, team_id)
 
         response = {
             "processedHighlights": past_highlights,

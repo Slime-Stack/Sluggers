@@ -12,7 +12,7 @@ from apps.backend.api.genai.generative_model_config import GenerativeModelConfig
 from apps.backend.api.highlight_generation.image_generator import upload_story_list_image_to_gcs, upload_image_to_gcs
 from apps.backend.api.highlight_generation.prompt_garden import provide_story_prompt, provide_imagen_model_prompt
 from apps.backend.api.highlight_generation.speech_generator import synthesize_highlight_from_ssml
-from apps.backend.utils.constants import BUCKET_URI, DATABASE_ID, PROJECT_ID
+from apps.backend.config import PROJECT_ID, DATABASE_ID, BUCKET_URI
 
 # Initialize Firestore and Cloud Storage
 db = firestore.Client(project=PROJECT_ID, database=DATABASE_ID)

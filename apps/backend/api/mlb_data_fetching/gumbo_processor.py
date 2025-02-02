@@ -47,4 +47,4 @@ def extract_game_overview(data):
     return overview
 
 def _game_url_builder(game_pk):
-    return f"{MLB_STATS_API_BASE_URL}{MIDDLE_URL_SEGMENT}{game_pk}{GAME_FEED_ENDPOINT}"
+    return f"{MLB_STATS_API_BASE_URL}{MIDDLE_URL_SEGMENT}{game_pk}/{GAME_FEED_ENDPOINT}"

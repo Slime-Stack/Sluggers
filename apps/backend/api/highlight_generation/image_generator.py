@@ -1,3 +1,4 @@
+import io
 import logging
 
 from google.cloud import aiplatform, storage

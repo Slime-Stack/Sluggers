@@ -1,10 +1,9 @@
-import logging
 from typing import Any
 
 from google.cloud import storage
 import io
 
-logger = logging.getLogger(__name__)
+from apps.backend.utils.log_util import logger
 
 
 def upload_blob_from_stream(bucket_name: str, destination_blob_name: str, content: Any):
@@ -24,7 +23,7 @@ def upload_blob_from_stream(bucket_name: str, destination_blob_name: str, conten
             )
         return blob.public_url
     except Exception as e:
-        logging.error(f"Opps. Blob upload broke somewhere! {e}")
+        logger.error(f"Opps. Blob upload broke somewhere! {e}")
 
 
 def upload_blob_from_memory(bucket_name: str, contents: str, destination_blob_name: str):
@@ -33,5 +32,5 @@ def upload_blob_from_memory(bucket_name: str, contents: str, destination_blob_na
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(contents)
-    print(f"{destination_blob_name} with contents {contents} uploaded to {bucket_name}.")
+    logger.info(f"{destination_blob_name} with contents {contents} uploaded to {bucket_name}.")
     return blob.public_url

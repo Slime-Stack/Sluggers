@@ -7,9 +7,11 @@ import requests
 from google.auth import default
 from google.cloud import firestore
 
+from apps.backend.config import PROJECT_ID, DATABASE_ID
+
 db = firestore.Client(
-    project="slimeify",  # Your Google Cloud project ID
-    database="mlb-sluggers"
+    project=PROJECT_ID,
+    database=DATABASE_ID
 )
 
 API_BASE_URL = os.getenv("SLIME_API_BASE_URL")
@@ -27,7 +29,6 @@ def ai_processing_service(cloud_event):
             raise ValueError("Received empty message data")
 
         decoded_message = json.loads(base64.b64decode(message_data).decode("utf-8"))
-
         game_pk = decoded_message.get("gamePk")
         if not game_pk:
             raise ValueError("Missing 'gamePk' in Pub/Sub message")

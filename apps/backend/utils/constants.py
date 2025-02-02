@@ -1,9 +1,6 @@
-PROJECT_ID = "slimeify"
-DATABASE_ID = "mlb-sluggers"
 MLB_STATS_API_BASE_URL = "https://statsapi.mlb.com/api/"
 MLB_SCHEDULE_API_BASE_URL = f"{MLB_STATS_API_BASE_URL}v1/schedule"
 MLB_LOGOS_URL = "https://www.mlbstatic.com/team-logos/"
-BUCKET_URI = f"gs://mlb-sluggers-bucket-0122-{PROJECT_ID}-unique"
 ISO_FORMAT = "+00:00"
 TEAMS = [
                 {

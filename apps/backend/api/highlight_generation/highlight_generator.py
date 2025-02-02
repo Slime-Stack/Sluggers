@@ -55,7 +55,7 @@ def generate_game_highlights(game_pk_str):
         logger.debug("Updating Firestore...")
         doc_ref = db.collection("highlights").document(game_pk_str)
         doc_ref.update({
-            "storyboard": storyboard,
+            "storyboard": jsonify(storyboard),
             "updatedAt": get_current_datetime()
         })
         logger.info("Successfully updated Firestore")
