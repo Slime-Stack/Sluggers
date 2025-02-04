@@ -109,14 +109,8 @@ def check_next_game(season, team_id, date):
                         next_game = {
                             "gamePk": game_pk,
                             "gameDate": game["gameDate"],
-                            "homeTeam": {
-                                "teamId": game["teams"]["home"]["team"]["id"],
-                                "name": game["teams"]["home"]["team"]["name"]
-                            },
-                            "awayTeam": {
-                                "teamId": game["teams"]["away"]["team"]["id"],
-                                "name": game["teams"]["away"]["team"]["name"]
-                            },
+                            "homeTeam": game["teams"]["home"]["team"]["id"],
+                            "awayTeam": game["teams"]["away"]["team"]["id"],
                             "status": game["status"]["detailedState"],
                             "updatedAt": current_date,
                             "createdAt": current_date
@@ -144,7 +138,6 @@ def _loop_over_game_dates(data, current_date, highlights):
                 game_pk_str = str(game["gamePk"])
                 _process_game(game, game_pk_str, current_date, highlights)
 
-    return highlights
 
 def _is_final_game(game):
     """Check if a game is in Final state."""
@@ -161,6 +154,7 @@ def _process_game(game, game_pk_str, current_date, highlights):
         _create_new_game(doc_ref, game, game_pk_str, current_date)
 
     highlights.append(game_pk_str)
+
 
 def _update_existing_game(doc_ref, doc_snapshot, game_pk_str, current_date):
     """Update an existing game if its status has changed to Final."""
@@ -184,14 +178,8 @@ def _create_new_highlight_record(game_pk_str=None, game_date=None, game=None, cu
     return {
         "gamePk": game_pk_str,
         "gameDate": game_date,
-        "homeTeam": {
-            "teamId": game["teams"]["home"]["team"]["id"],
-            "name": game["teams"]["home"]["team"]["name"]
-        },
-        "awayTeam": {
-            "teamId": game["teams"]["away"]["team"]["id"],
-            "name": game["teams"]["away"]["team"]["name"]
-        },
+        "homeTeam": game["teams"]["home"]["team"]["id"],
+        "awayTeam": game["teams"]["away"]["team"]["id"],
         "status": game["status"]["detailedState"],
         "updatedAt": current_date,
         "createdAt": current_date,

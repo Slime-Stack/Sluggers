@@ -79,7 +79,7 @@ def add_highlight():
             return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
 
         # Validate 'homeTeam' and 'awayTeam' fields
-        if not isinstance(data["homeTeam"], dict) or not isinstance(data["awayTeam"], dict):
+        if not isinstance(data["homeTeam"], int) or not isinstance(data["awayTeam"], int):
             return jsonify({"error": "'homeTeam' and 'awayTeam' must be objects."}), 400
 
         # Validate 'storyboard' - it must be a dictionary
