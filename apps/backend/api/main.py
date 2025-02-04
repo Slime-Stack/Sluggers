@@ -31,35 +31,39 @@ def get_teams():
 def get_highlights(team_id):
     try:
         highlights_ref = db.collection("highlights")
-        query_home = highlights_ref.where("homeTeam.team_id", "==", team_id).stream()
-        query_away = highlights_ref.where("awayTeam.team_id", "==", team_id).stream()
+        query_home = highlights_ref.where("homeTeam.teamId", "==", team_id).stream()
+        query_away = highlights_ref.where("awayTeam.teamId", "==", team_id).stream()
 
-        # Use a dictionary keyed by gamePk to avoid duplicates
         results = {}
 
-        def process_query(query):
+        def process_query(query, label):
+            print(f"Processing {label} query for team ID {team_id}...")
+
             for doc in query:
                 highlight = doc.to_dict()
                 game_pk = highlight.get("gamePk")
 
-                # Only add highlights that have a valid storyboard
-                if game_pk and "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
+                # Validate storyboard existence (now a dict, not a list)
+                if game_pk and isinstance(highlight.get("storyboard"), dict):
                     results[game_pk] = highlight  # Store highlight by gamePk
 
-        # Process both home & away team queries
-        process_query(query_home)
-        process_query(query_away)
+        # Process both queries
+        process_query(query_home, "home")
+        process_query(query_away, "away")
+
+        # If no results, return 404
+        if not results:
+            print(f"No highlights found for team {team_id}.")
+            return jsonify({"error": f"No highlights found for team {team_id}"}), 404
 
         # Ensure sorting by gameDate in descending order
-        sorted_results = dict(sorted(results.items(), key=lambda item: item[1]["gameDate"], reverse=True))
+        sorted_highlights = sorted(results.values(), key=lambda h: h["gameDate"], reverse=True)
 
-        # Return as a JSON object where `gamePk` is the key
-        return jsonify(sorted_results), 200
+        return jsonify({"highlights": sorted_highlights}), 200
 
     except Exception as e:
         print(f"Error fetching highlights for team {team_id}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
-
 
 # Endpoint to create a new highlight
 @app.route("/highlights", methods=["POST"])
@@ -78,18 +82,22 @@ def add_highlight():
         if not isinstance(data["homeTeam"], dict) or not isinstance(data["awayTeam"], dict):
             return jsonify({"error": "'homeTeam' and 'awayTeam' must be objects."}), 400
 
-        # Validate 'storyboard' array
-        if not isinstance(data["storyboard"], list) or not all(isinstance(item, dict) for item in data["storyboard"]):
-            return jsonify({"error": "'storyboard' must be an array of objects."}), 400
+        # Validate 'storyboard' - it must be a dictionary
+        if not isinstance(data.get("storyboard"), dict):
+            return jsonify({"error": "'storyboard' must be an object, not an array."}), 400
 
-        # Validate each storyboard item
-        for item in data["storyboard"]:
-            if "storyTitle" not in item or "teaserSummary" not in item or "scenes" not in item:
-                return jsonify(
-                    {"error": "Each storyboard must include 'storyTitle', 'teaserSummary', and 'scenes'."}), 400
-            if not isinstance(item["scenes"], list):
-                return jsonify({"error": "Each storyboard's 'scenes' must be an array."}), 400
+        # Validate required storyboard fields
+        required_storyboard_fields = ["storyTitle", "teaserSummary", "scenes"]
+        missing_storyboard_fields = [field for field in required_storyboard_fields if field not in data["storyboard"]]
 
+        if missing_storyboard_fields:
+            return jsonify(
+                {"error": f"Missing required storyboard fields: {', '.join(missing_storyboard_fields)}"}), 400
+
+        # Validate 'scenes' inside storyboard - it must be a list of objects
+        if not isinstance(data["storyboard"]["scenes"], list) or not all(
+                isinstance(scene, dict) for scene in data["storyboard"]["scenes"]):
+            return jsonify({"error": "'scenes' inside 'storyboard' must be an array of objects."}), 400
         # Convert gamePk to string for consistency
         game_pk_str = str(data["gamePk"])
 
