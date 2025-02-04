@@ -32,8 +32,8 @@ def get_teams():
 def get_highlights(team_id):
     try:
         highlights_ref = db.collection("highlights")
-        query_home = highlights_ref.where("homeTeam.teamId", "==", team_id).stream()
-        query_away = highlights_ref.where("awayTeam.teamId", "==", team_id).stream()
+        query_home = highlights_ref.where("homeTeam", "==", team_id).stream()
+        query_away = highlights_ref.where("awayTeam", "==", team_id).stream()
 
         results = {}
 
@@ -144,8 +144,8 @@ def process_highlights(season):
         team_id = int(team_param) if team_param else None
 
         # Process past games for the specific date (team filter is optional)
-        past_highlights = process_past_games(season, date_param, team_id)
-        next_game = check_next_game(season, date_param, team_id)
+        past_highlights = process_past_games(season, team_id, date_param)
+        next_game = check_next_game(season, team_id, date_param)
 
         response = {
             "processedHighlights": past_highlights,
