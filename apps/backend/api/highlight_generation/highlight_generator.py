@@ -1,7 +1,7 @@
+import json
 import logging
 import time
 
-from flask import jsonify
 from google.cloud import firestore
 
 from apps.backend.api.highlight_generation.storyboard_generator import build_story_board
@@ -51,11 +51,11 @@ def generate_game_highlights(game_pk_str):
             else:
                 raise
 
-        # Update Firestore
+        # Update Firestore with the serialized storyboard
         logger.debug("Updating Firestore...")
         doc_ref = db.collection("highlights").document(game_pk_str)
         doc_ref.update({
-            "storyboard": jsonify(storyboard),
+            "storyboard": json.dumps(storyboard, indent=4),  # Convert to dict before storing
             "updatedAt": get_current_datetime()
         })
         logger.info("Successfully updated Firestore")
@@ -72,8 +72,10 @@ def generate_game_highlights(game_pk_str):
 if __name__ == "__main__":
     logging.info("Starting highlight generation test...")
     try:
-        test_storyboard = jsonify(generate_game_highlights("775294"))
+        pks = ["775300", "775294", "775298", "775297", "775296"]
+        for pk in pks:
+            generate_game_highlights(pk)
         logging.info("Highlight generation completed successfully")
-        logging.debug("Generated storyboard: %s", f"{test_storyboard}")
+        # logging.debug("Generated storyboard: %s", f"{test_storyboard}")
     except Exception as e:
         logging.error("Highlight generation test failed", exc_info=True)

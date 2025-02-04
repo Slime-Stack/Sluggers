@@ -23,7 +23,6 @@ setup(
         'google-cloud-texttospeech',
         'google-cloud-aiplatform',
         'google-cloud-pubsub',
-        'google-cloud-secretmanager'
     ],
     entry_points={
         'console_scripts': [

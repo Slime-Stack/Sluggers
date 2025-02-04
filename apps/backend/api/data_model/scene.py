@@ -1,6 +1,4 @@
-from dataclasses import dataclass
-
-from typing_extensions import TypedDict
+from pydantic.dataclasses import dataclass
 
 @dataclass
 class Scene:

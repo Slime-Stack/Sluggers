@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_imagen_prompts(base_story_json_str, game_overview):
-    storyboard = add_imagen_prompts_to_storyboard(base_story_json_str, game_overview)
+    storyboard = _add_imagen_prompts_to_storyboard(base_story_json_str, game_overview)
     if not storyboard:
         logger.error("Failed to add imagen prompts to storyboard - received bad response")
         raise ValueError("Bad response from imagen prompt generation")
@@ -44,10 +44,17 @@ def build_story_board(play_by_play, game_overview, game_pk) -> Storyboard:
 
         # Generate a storyboard json string without Imagen prompts
         base_story_json_str = _generate_base_storyboard(play_by_play)
-
+        data = json.loads(base_story_json_str)
+        with open(f"{game_pk}_base_storyboard.json", "w") as f:
+            json.dump(data, f, indent=4)
+        return data
+    except Exception as e:
+        logger.error("something went wrong %s", f"{e}")
         # Generate storyboard with imagen prompts from base json str
         logger.debug("Adding imagen prompts to storyboard...")
         storyboard = _get_imagen_prompts(base_story_json_str, game_overview)
+        with open("prompting_storyboard.json", "w") as f:
+            f.write(storyboard.json())
         # Generate, upload and set the game list item image
         logger.debug("Generating and uploading story list image...")
         try:
@@ -65,7 +72,7 @@ def build_story_board(play_by_play, game_overview, game_pk) -> Storyboard:
             # Generate and upload scene image
             try:
                 logger.debug(f"Generating image for scene {scene.sceneNumber}...")
-                scene.image_url = add_image_url(scene, game_pk)
+                scene.image_url = _add_image_url(scene, game_pk)
                 logger.debug(f"Successfully added image URL: {scene.image_url}")
             except Exception as e:
                 logger.error(f"Failed to generate/upload image for scene {scene.sceneNumber}: {str(e)}", exc_info=True)
@@ -102,7 +109,7 @@ def build_story_board(play_by_play, game_overview, game_pk) -> Storyboard:
         raise
 
 
-def tell_the_plays_as_a_story(text: List[dict]) -> str:
+def _tell_the_plays_as_a_story(text: List[dict]) -> str:
     """
     Generates a story from play data.
 
@@ -122,7 +129,7 @@ def tell_the_plays_as_a_story(text: List[dict]) -> str:
         return ""
 
 
-def add_imagen_prompts_to_storyboard(story: str, overview: str) -> Storyboard:
+def _add_imagen_prompts_to_storyboard(story: str, overview: str) -> Storyboard:
     """
     Generates imagen prompts for each scene from a given story.
 
@@ -150,7 +157,7 @@ def add_imagen_prompts_to_storyboard(story: str, overview: str) -> Storyboard:
         return Storyboard()
 
 
-def add_image_url(scene: Scene, game_pk) -> str:
+def _add_image_url(scene: Scene, game_pk) -> str:
     """
         Runs image generation: saves them to gcs and then returns the url to the stored image for each scene from a given story.
         model.generateImage()
@@ -171,7 +178,7 @@ def provide_audio_url_for_scene():
 
 def _generate_base_storyboard(play_by_play):
     logger.debug("Generating base story from play-by-play data...")
-    base_story_json_str = tell_the_plays_as_a_story(play_by_play)
+    base_story_json_str = _tell_the_plays_as_a_story(play_by_play)
     if not base_story_json_str:
         logger.error("Failed to generate base story - received empty response")
         raise ValueError("Empty response from story generation")
