@@ -31,35 +31,33 @@ def get_teams():
 def get_highlights(team_id):
     try:
         highlights_ref = db.collection("highlights")
-        query = highlights_ref.where("homeTeam.team_id", "==", team_id).stream()
+        query_home = highlights_ref.where("homeTeam.team_id", "==", team_id).stream()
         query_away = highlights_ref.where("awayTeam.team_id", "==", team_id).stream()
 
-        # Combine results from both queries
-        results = []
-        for doc in query:
-            highlight = doc.to_dict()
-            if "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
-                results.append(highlight)
+        # Use a dictionary keyed by gamePk to avoid duplicates
+        results = {}
 
-        for doc in query_away:
-            highlight = doc.to_dict()
-            if "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
-                results.append(highlight)
+        def process_query(query):
+            for doc in query:
+                highlight = doc.to_dict()
+                game_pk = highlight.get("gamePk")
 
-        # Remove duplicates (if any) based on gamePk
-        results = {item["gamePk"]: item for item in results}.values()
+                # Only add highlights that have a valid storyboard
+                if game_pk and "storyboard" in highlight and isinstance(highlight["storyboard"], list) and highlight["storyboard"]:
+                    results[game_pk] = highlight  # Store highlight by gamePk
 
-        # Sort by gameDate in descending order
-        results = sorted(results, key=lambda h: h["gameDate"], reverse=True)
+        # Process both home & away team queries
+        process_query(query_home)
+        process_query(query_away)
 
-        # Return results or 404 if none found
-        if not results:
-            return jsonify({"error": "No highlights found for the specified team"}), 404
-        return jsonify(results), 200
+        # Ensure sorting by gameDate in descending order
+        sorted_results = dict(sorted(results.items(), key=lambda item: item[1]["gameDate"], reverse=True))
+
+        # Return as a JSON object where `gamePk` is the key
+        return jsonify(sorted_results), 200
 
     except Exception as e:
-        # Log and return the error
-        logging.error(msg=f"Error fetching highlights for team {team_id}: {e}")
+        print(f"Error fetching highlights for team {team_id}: {e}")
         return jsonify({"error": f"An internal error occurred - {str(e)}"}), 500
 
 

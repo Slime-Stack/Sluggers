@@ -56,12 +56,13 @@ def upload_image_to_gcs(prompt: str, game_pk: str, scene_number: int, is_story_i
         # Upload the image
         blob.upload_from_file(image_bytes, content_type="image/png")
 
-    logger.info(f"Successfully uploaded image: {image_name}")
-        return f"gs://{bucket_name}/{image_name}"
+
         
     except Exception as e:
         logger.error(f"Failed to upload image: {str(e)}", exc_info=True)
         return get_placeholder_image_url()
+    logger.info(f"Successfully uploaded image: {image_name}")
+    return f"gs://{bucket_name}/{image_name}"
 
 def get_placeholder_image_url() -> str:
     """Return a placeholder image URL when generation fails."""
