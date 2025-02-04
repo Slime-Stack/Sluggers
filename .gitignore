@@ -1,3 +1,8 @@
 .DS_Store
 apps/backend/.DS_Store
 apps/backend/api/.DS_Store
+*slimeify-418ca51fd7e7.json
+.env
+.venv/*
+.idea/*
+apps/backend/.env.yaml

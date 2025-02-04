@@ -1,21 +1,23 @@
-import functions_framework
-import json
 import base64
+import json
+
+import functions_framework
 import requests
-from google.cloud import firestore, pubsub_v1
 from google.auth import default
-from google.cloud import pubsub_v1
+from google.cloud import firestore, pubsub_v1
+
+db = firestore.Client(
+    project = "slimeify",  # Your Google Cloud project ID
+    database = "mlb-sluggers"
+)
+
+# Initialize Pub/Sub Publisher
+publisher = pubsub_v1.PublisherClient()
+game_status_topic_path = publisher.topic_path("slimeify", "sluggers-process-game-status")
+ai_processing_topic = publisher.topic_path("slimeify", "sluggers-ai-processing")
 
 # Automatically retrieves the best available credentials
 credentials, project = default()
-
-# Initialize Firestore and Pub/Sub
-db = firestore.Client(
-    project="slimeify",  # Google Cloud project ID
-    database="mlb-sluggers"  # Must be declared if it's not "(default)"
-)
-publisher = pubsub_v1.PublisherClient()
-ai_processing_topic = publisher.topic_path("slimeify", "sluggers-ai-processing")
 
 @functions_framework.cloud_event
 def process_game_status_event(cloud_event):
