@@ -111,15 +111,11 @@ def check_next_game(season, team_id, date):
                             "gameDate": game["gameDate"],
                             "homeTeam": {
                                 "teamId": game["teams"]["home"]["team"]["id"],
-                                "name": game["teams"]["home"]["team"]["name"],
-                                "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
-                                "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+                                "name": game["teams"]["home"]["team"]["name"]
                             },
                             "awayTeam": {
                                 "teamId": game["teams"]["away"]["team"]["id"],
-                                "name": game["teams"]["away"]["team"]["name"],
-                                "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
-                                "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+                                "name": game["teams"]["away"]["team"]["name"]
                             },
                             "status": game["status"]["detailedState"],
                             "updatedAt": current_date,
@@ -147,6 +143,8 @@ def _loop_over_game_dates(data, current_date, highlights):
             if _is_final_game(game):
                 game_pk_str = str(game["gamePk"])
                 _process_game(game, game_pk_str, current_date, highlights)
+
+    return highlights
 
 def _is_final_game(game):
     """Check if a game is in Final state."""
@@ -188,15 +186,11 @@ def _create_new_highlight_record(game_pk_str=None, game_date=None, game=None, cu
         "gameDate": game_date,
         "homeTeam": {
             "teamId": game["teams"]["home"]["team"]["id"],
-            "name": game["teams"]["home"]["team"]["name"],
-            "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
-            "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+            "name": game["teams"]["home"]["team"]["name"]
         },
         "awayTeam": {
             "teamId": game["teams"]["away"]["team"]["id"],
-            "name": game["teams"]["away"]["team"]["name"],
-            "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
-            "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+            "name": game["teams"]["away"]["team"]["name"]
         },
         "status": game["status"]["detailedState"],
         "updatedAt": current_date,

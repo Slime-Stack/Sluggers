@@ -3,7 +3,7 @@ import requests
 from apps.backend.utils.constants import MLB_STATS_API_BASE_URL
 
 MIDDLE_URL_SEGMENT = "v1.1/game/"
-GAME_FEED_ENDPOINT = "feed/live"
+GAME_FEED_ENDPOINT = "/feed/live"
 
 def fetch_single_game_data(game_pk):
     url = _game_url_builder(game_pk)
