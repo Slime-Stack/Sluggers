@@ -110,16 +110,16 @@ def check_next_game(season, team_id, date):
                             "gamePk": game_pk,
                             "gameDate": game["gameDate"],
                             "homeTeam": {
-                                "team_id": game["teams"]["home"]["team"]["id"],
+                                "teamId": game["teams"]["home"]["team"]["id"],
                                 "name": game["teams"]["home"]["team"]["name"],
                                 "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
-                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+                                "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
                             },
                             "awayTeam": {
-                                "team_id": game["teams"]["away"]["team"]["id"],
+                                "teamId": game["teams"]["away"]["team"]["id"],
                                 "name": game["teams"]["away"]["team"]["name"],
                                 "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
-                                "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+                                "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
                             },
                             "status": game["status"]["detailedState"],
                             "updatedAt": current_date,
@@ -187,16 +187,16 @@ def _create_new_highlight_record(game_pk_str=None, game_date=None, game=None, cu
         "gamePk": game_pk_str,
         "gameDate": game_date,
         "homeTeam": {
-            "team_id": game["teams"]["home"]["team"]["id"],
+            "teamId": game["teams"]["home"]["team"]["id"],
             "name": game["teams"]["home"]["team"]["name"],
             "shortName": game["teams"]["home"]["team"].get("abbreviation", ""),
-            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
+            "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['home']['team']['id']}.svg"
         },
         "awayTeam": {
-            "team_id": game["teams"]["away"]["team"]["id"],
+            "teamId": game["teams"]["away"]["team"]["id"],
             "name": game["teams"]["away"]["team"]["name"],
             "shortName": game["teams"]["away"]["team"].get("abbreviation", ""),
-            "logo_url": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
+            "logoUrl": f"https://www.mlbstatic.com/team-logos/{game['teams']['away']['team']['id']}.svg"
         },
         "status": game["status"]["detailedState"],
         "updatedAt": current_date,
